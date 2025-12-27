@@ -48,29 +48,50 @@ export interface Sale {
   created_at?: string;
 }
 
-// Matches 'clientes' table
+// Matches 'clientes' table - ATUALIZADO
 export interface Client {
   id: number;
   user_id: string;
-  nome_cliente: string;
+  nome_cliente: string; // nome_completo
+  apelido?: string;
   whatsapp: string;
-  preferencias?: string;
+  instagram?: string;
+  seguidores?: number;
+  genero?: 'masculino' | 'feminino' | 'outro';
+  
+  // Consumption Profile
+  genero_musical?: string[]; // Array of strings
+  tipo_festa_frequente?: 'open_bar' | 'open_format' | 'balada_genero_especifico' | 'camarote_evento_premium' | 'outro';
+  ticket_medio_gasto?: 'baixo' | 'medio' | 'alto';
+  
+  // Strategic Classification
+  nivel_cliente: 'frio' | 'medio' | 'quente' | 'vip';
+  
   recorrente: boolean;
+  preferencias?: string; // Obs gerais
   created_at?: string;
 }
 
-// Matches 'lista_convidados' (Experience Module)
+// Matches 'lista_convidados' (Experience Module + Pós Evento)
 export interface GuestEntry {
   id: number;
   event_id: number;
   client_id: number;
   user_id: string; // Promoter ID
   status: 'confirmado' | 'check_in' | 'nao_compareceu';
+  
+  // Post Event Fields
+  pos_evento_concluido: boolean;
+  comprou_ingresso?: boolean;
+  origem_compra?: 'rp' | 'amigo' | 'bilheteria' | 'outro';
+  acompanhado_por?: 'sozinho' | 'amigos' | 'grupo';
+  feedback_texto?: string;
+  avaliacao_geral?: number; // 1-5
+  tags_feedback?: string[]; // JSON array in DB
+
   check_in_time?: string;
-  notes?: string; // Pre-party notes
-  feedback?: string; // Post-party feedback
-  classification?: 'alto_potencial' | 'recorrente' | 'ocasional';
   client?: Client; // Join
+  event?: Event; // Join
 }
 
 export interface Achievement {
