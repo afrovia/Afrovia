@@ -57,25 +57,18 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
           .eq('id', authData.user.id)
           .single();
 
-        if (profileError) {
-           // Handle missing table specifically (Postgres code 42P01)
-           if (profileError.code === '42P01') {
-             console.warn("Table users_profile missing. Treating as fresh user.");
-           } else if (profileError.code !== 'PGRST116') {
-             // Ignore "no rows found" (PGRST116), throw others
-             throw profileError;
-           }
-        }
-        
+        // Use metadata as fallback if profile table is empty/missing
+        const metadata = authData.user.user_metadata || {};
+
         const loggedInUser: User = {
           id: authData.user.id,
-          name: profileData?.nome || authData.user.user_metadata?.name || 'Usuário',
+          name: profileData?.nome || metadata.name || 'Usuário',
           email: authData.user.email || '',
-          role: profileData?.role || 'promoter',
-          level: profileData?.nivel || 'iniciante',
-          whatsapp: profileData?.whatsapp,
-          instagram: profileData?.instagram,
-          city: profileData?.cidade,
+          role: profileData?.role || metadata.role || 'promoter',
+          level: profileData?.nivel || metadata.level || 'iniciante',
+          whatsapp: profileData?.whatsapp || metadata.whatsapp,
+          instagram: profileData?.instagram || metadata.instagram,
+          city: profileData?.cidade || metadata.city,
           // For LOGIN: Use DB value. If null/undefined (legacy), assume TRUE (completed) to skip it.
           onboarding_completed: profileData?.onboarding_completed ?? true 
         };
@@ -86,7 +79,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
       logError("Login error details:", err);
       // Ensure error message is a string
       const errorMessage = err?.message || (typeof err === 'string' ? err : 'Erro ao fazer login. Verifique suas credenciais.');
-      setError(errorMessage);
+      setError(errorMessage === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : errorMessage);
     } finally {
       setLoading(false);
     }
@@ -98,13 +91,21 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
     setError(null);
 
     try {
-      // 1. Create Auth User
+      // 1. Create Auth User AND Store Metadata (Fail-safe)
+      // Storing data in metadata ensures that even if the secondary table insert fails,
+      // we have the user data stored in the Auth object.
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name, 
+            name,
+            whatsapp,
+            instagram,
+            city,
+            role: 'promoter',
+            level,
+            onboarding_completed: false
           },
         },
       });
@@ -112,31 +113,30 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
       if (authError) throw authError;
 
       if (authData.user) {
-        // 2. Create Profile Record
-        const { error: profileError } = await supabase
-          .from('users_profile')
-          .insert([
-            {
-              id: authData.user.id,
-              nome: name,
-              email: email,
-              whatsapp: whatsapp,
-              instagram: instagram,
-              cidade: city,
-              role: 'promoter',
-              nivel: level,
-              // IMPORTANT: Explicitly set to FALSE for NEW registrations so they see the onboarding
-              onboarding_completed: false 
-            }
-          ]);
+        // 2. Attempt Create Profile Record (Best Effort)
+        // We wrap this in a separate try/catch so it doesn't block the user if the table is missing
+        try {
+            const { error: profileError } = await supabase
+            .from('users_profile')
+            .insert([
+                {
+                id: authData.user.id,
+                nome: name,
+                email: email,
+                whatsapp: whatsapp,
+                instagram: instagram,
+                cidade: city,
+                role: 'promoter',
+                nivel: level,
+                onboarding_completed: false
+                }
+            ]);
 
-        if (profileError) {
-          logError("Profile creation error:", profileError);
-          if (profileError.code === '42P01') {
-             setError("Erro crítico: Banco de dados não inicializado (Tabela 'users_profile' não encontrada). Contate o suporte ou administrador.");
-             setLoading(false);
-             return; 
-          }
+            if (profileError) {
+                console.warn("Could not create users_profile record (likely missing table or RLS). Using Auth Metadata instead.", profileError);
+            }
+        } catch (dbError) {
+            console.warn("Database error ignored to allow login:", dbError);
         }
 
         const newUser: User = {
@@ -148,7 +148,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
           whatsapp,
           instagram,
           city,
-          onboarding_completed: false // Pass false directly to state so they see it immediately
+          onboarding_completed: false
         };
         onLogin(newUser);
       }
@@ -156,6 +156,11 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
       logError("Registration error:", err);
       let msg = err?.message || err?.error_description || 'Erro ao criar conta.';
       if (typeof msg !== 'string') msg = 'Erro desconhecido ao criar conta.';
+      
+      if (msg.includes('already registered')) {
+          msg = 'Este e-mail já está cadastrado. Tente fazer login.';
+      }
+      
       setError(msg);
     } finally {
       setLoading(false);
@@ -219,21 +224,21 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-500/5 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400 text-xs leading-relaxed">
+            <div className="mb-6 p-4 bg-red-500/5 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400 text-xs leading-relaxed animate-in fade-in slide-in-from-top-2">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-             <div className="mb-6 p-4 bg-green-500/5 border border-green-500/20 rounded-xl flex items-start gap-3 text-green-400 text-xs leading-relaxed">
+             <div className="mb-6 p-4 bg-green-500/5 border border-green-500/20 rounded-xl flex items-start gap-3 text-green-400 text-xs leading-relaxed animate-in fade-in slide-in-from-top-2">
               <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
               <span>{successMsg}</span>
             </div>
           )}
 
           {mode === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-5">
+            <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in fade-in">
               <div className="relative group">
                 <input 
                   type="email" 
@@ -274,7 +279,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
           )}
 
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+            <form onSubmit={handleRegisterSubmit} className="space-y-4 animate-in fade-in">
               <div className="relative group">
                 <input 
                   type="text" 
@@ -397,7 +402,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
           )}
 
           {mode === 'forgot_password' && (
-            <form onSubmit={handleForgotPassword} className="space-y-5">
+            <form onSubmit={handleForgotPassword} className="space-y-5 animate-in fade-in">
               <div className="relative group">
                 <input 
                   type="email" 

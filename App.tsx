@@ -18,7 +18,7 @@ function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   // Helper to fetch profile data from the database
-  const fetchUserProfile = async (userId: string, email: string) => {
+  const fetchUserProfile = async (userId: string, email: string, userMetadata: any = {}) => {
     try {
       const { data, error } = await supabase
         .from('users_profile')
@@ -28,22 +28,23 @@ function App() {
 
       if (error) {
         // Handle case where table is missing (42P01) or other DB errors gracefully
-        // allowing the user to still log in with basic features.
         if (error.code === '42P01') {
-           console.warn("Database table 'users_profile' not found. Please run the migration SQL.");
+           console.warn("Database table 'users_profile' not found. Using Auth Metadata.");
         } else if (error.code !== 'PGRST116') {
            console.warn("Error fetching profile:", error.message);
         }
 
-        // Return basic user structure so the app doesn't crash
-        // Assume existing users without profile data (legacy) have completed onboarding
+        // Return basic user structure from Auth Metadata if DB fails
         return {
           id: userId,
-          name: 'Usuário',
+          name: userMetadata.name || 'Usuário',
           email: email,
-          role: 'promoter',
-          level: 'iniciante',
-          onboarding_completed: true 
+          role: userMetadata.role || 'promoter',
+          level: userMetadata.level || 'iniciante',
+          whatsapp: userMetadata.whatsapp,
+          instagram: userMetadata.instagram,
+          city: userMetadata.city,
+          onboarding_completed: userMetadata.onboarding_completed ?? true 
         } as User;
       }
 
@@ -61,12 +62,13 @@ function App() {
       } as User;
     } catch (e) {
       console.error("Unexpected error fetching profile:", e);
+      // Fallback
       return {
           id: userId,
-          name: 'Usuário',
+          name: userMetadata.name || 'Usuário',
           email: email,
-          role: 'promoter',
-          level: 'iniciante',
+          role: userMetadata.role || 'promoter',
+          level: userMetadata.level || 'iniciante',
           onboarding_completed: true 
       } as User;
     }
@@ -76,7 +78,11 @@ function App() {
     // Check active session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const userProfile = await fetchUserProfile(session.user.id, session.user.email || '');
+        const userProfile = await fetchUserProfile(
+            session.user.id, 
+            session.user.email || '',
+            session.user.user_metadata
+        );
         if (userProfile) {
           setUser(userProfile);
           setCurrentPage('dashboard');
@@ -91,11 +97,16 @@ function App() {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         // Fetch fresh profile data on auth state change
-        const userProfile = await fetchUserProfile(session.user.id, session.user.email || '');
+        const userProfile = await fetchUserProfile(
+            session.user.id, 
+            session.user.email || '',
+            session.user.user_metadata
+        );
         if (userProfile) {
           setUser(userProfile);
           // Only redirect to dashboard if we are currently on auth or landing
-          setCurrentPage((prev) => (prev === 'auth' ? 'dashboard' : prev));
+          // Don't forcefully redirect if we are already there to avoid reload loops
+          setCurrentPage((prev) => (prev === 'auth' || prev === 'landing' ? 'dashboard' : prev));
         }
       } else {
         setUser(null);
