@@ -15,6 +15,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<PageView>('landing');
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   // Helper to fetch profile data from the database
   const fetchUserProfile = async (userId: string, email: string) => {
@@ -118,8 +119,12 @@ function App() {
   const navigateTo = (page: PageView) => {
     // Prevent going to dashboard if not logged in
     if (page === 'dashboard' && !user) {
+      setAuthMode('login');
       setCurrentPage('auth');
       return;
+    }
+    if (page === 'auth') {
+      setAuthMode('login');
     }
     setCurrentPage(page);
   };
@@ -147,12 +152,18 @@ function App() {
 
       {currentPage === 'landing' && (
         <main>
-          <Hero />
+          <Hero onRegister={() => {
+            setAuthMode('register');
+            setCurrentPage('auth');
+          }} />
           <About />
           <TargetAudience />
           <HowItWorks />
           <Differentiators />
-          <FooterCTA />
+          <FooterCTA onApply={() => {
+            setAuthMode('register');
+            setCurrentPage('auth');
+          }} />
         </main>
       )}
 
@@ -160,6 +171,7 @@ function App() {
         <Auth 
           onLogin={handleLogin} 
           onBack={() => setCurrentPage('landing')} 
+          initialMode={authMode}
         />
       )}
 

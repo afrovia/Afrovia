@@ -1,7 +1,11 @@
 import React from 'react';
 import { Button } from './Button';
 
-export const FooterCTA: React.FC = () => {
+interface FooterCTAProps {
+  onApply: () => void;
+}
+
+export const FooterCTA: React.FC<FooterCTAProps> = ({ onApply }) => {
   return (
     <div className="relative py-32 px-6 text-center overflow-hidden">
       {/* Background with overlay */}
@@ -19,7 +23,7 @@ export const FooterCTA: React.FC = () => {
           Pronto para crescer de verdade no mercado de festas?
         </h2>
         <div className="flex justify-center">
-          <Button className="text-lg px-12 py-5 shadow-2xl shadow-tiffany-green/20">
+          <Button onClick={onApply} className="text-lg px-12 py-5 shadow-2xl shadow-tiffany-green/20">
             Aplicar para Afrovia
           </Button>
         </div>

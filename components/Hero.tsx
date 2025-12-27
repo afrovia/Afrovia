@@ -2,7 +2,11 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from './Button';
 
-export const Hero: React.FC = () => {
+interface HeroProps {
+  onRegister: () => void;
+}
+
+export const Hero: React.FC<HeroProps> = ({ onRegister }) => {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
@@ -36,7 +40,7 @@ export const Hero: React.FC = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Button>
+          <Button onClick={onRegister}>
             Quero crescer como Rp
             <ArrowRight className="inline-block ml-2 w-4 h-4" />
           </Button>

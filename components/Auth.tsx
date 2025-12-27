@@ -7,12 +7,13 @@ import { supabase } from '../supabaseClient';
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack: () => void;
+  initialMode?: 'login' | 'register';
 }
 
 type AuthMode = 'login' | 'register' | 'forgot_password';
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
-  const [mode, setMode] = useState<AuthMode>('login');
+export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'login' }) => {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
