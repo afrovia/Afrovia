@@ -31,7 +31,7 @@ const steps = [
 
 export const HowItWorks: React.FC = () => {
   return (
-    <Section className="bg-dark-800 relative overflow-hidden">
+    <Section id="how-it-works" className="bg-dark-800 relative overflow-hidden">
        {/* Background line decoration */}
       <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-tiffany-green/20 to-transparent hidden lg:block"></div>
 

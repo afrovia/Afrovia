@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
-import { LayoutDashboard, LogOut, Camera, Check } from 'lucide-react';
+import { LayoutDashboard, LogOut, Camera, Check, Menu, X } from 'lucide-react';
 import { getUserConfig } from '../utils';
 
 interface NavbarProps {
@@ -14,6 +14,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, user, onLogout }) =>
   const [imgError, setImgError] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -36,13 +37,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, user, onLogout }) =>
     }
   };
 
+  const handleNavClick = (action: () => void) => {
+    action();
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-dark-900/90 backdrop-blur-md py-4 border-b border-white/5' : 'bg-transparent py-6'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled || isMobileMenuOpen ? 'bg-dark-900/95 backdrop-blur-md py-4 border-b border-white/5 shadow-lg' : 'bg-transparent py-6'}`}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         <a 
           href="#" 
-          onClick={(e) => { e.preventDefault(); onNavigate('landing'); }}
-          className="block h-10 md:h-12 transition-transform duration-300 ease-in-out hover:scale-105 flex items-center"
+          onClick={(e) => { e.preventDefault(); handleNavClick(() => onNavigate('landing')); }}
+          className="block h-10 md:h-12 transition-transform duration-300 ease-in-out hover:scale-105 flex items-center relative z-50"
         >
           {!imgError ? (
             <img 
@@ -59,7 +65,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, user, onLogout }) =>
           )}
         </a>
 
-        <div className="flex items-center gap-6">
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-6">
           {user ? (
             <>
               <div className="relative group">
@@ -109,19 +116,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, user, onLogout }) =>
                      </div>
                    );
                 })()}
-                
-                {/* Optional Text Feedback Tooltip */}
-                 <div className={`absolute top-full right-0 mt-2 bg-green-500 text-dark-900 text-xs font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none transition-all duration-300 transform ${uploadSuccess ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
-                  Foto atualizada!
-                  <div className="absolute bottom-full right-4 border-4 border-transparent border-b-green-500"></div>
-                </div>
               </div>
 
-              <div className="h-6 w-px bg-white/10 hidden md:block"></div>
+              <div className="h-6 w-px bg-white/10"></div>
 
               <button 
                 onClick={() => onNavigate('dashboard')}
-                className="hidden md:flex items-center gap-2 text-sm font-medium text-white hover:text-tiffany-green transition-colors uppercase tracking-wider"
+                className="flex items-center gap-2 text-sm font-medium text-white hover:text-tiffany-green transition-colors uppercase tracking-wider"
               >
                 <LayoutDashboard size={16} />
                 Dashboard
@@ -138,9 +139,55 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, user, onLogout }) =>
           ) : (
             <button 
               onClick={() => onNavigate('auth')}
-              className="text-sm font-medium text-white hover:text-tiffany-green transition-colors uppercase tracking-wider"
+              className="px-6 py-2 rounded-full border border-tiffany-green/50 text-tiffany-green hover:bg-tiffany-green hover:text-dark-900 transition-all uppercase text-xs font-bold tracking-wider"
             >
               Login
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Toggle */}
+        <button 
+          className="md:hidden text-white p-2 relative z-50 focus:outline-none"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      <div className={`md:hidden absolute top-full left-0 w-full bg-dark-900/95 backdrop-blur-xl border-b border-white/5 transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="flex flex-col p-6 gap-4">
+          {user ? (
+            <>
+              <div className="flex items-center gap-3 pb-4 border-b border-white/5">
+                <div className="w-10 h-10 rounded-full bg-dark-800 flex items-center justify-center text-tiffany-green font-bold text-lg border border-white/10">
+                   {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-white font-bold">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleNavClick(() => onNavigate('dashboard'))}
+                className="flex items-center gap-3 text-white py-2 hover:text-tiffany-green transition-colors"
+              >
+                <LayoutDashboard size={18} /> Dashboard
+              </button>
+              <button 
+                onClick={() => handleNavClick(onLogout)}
+                className="flex items-center gap-3 text-gray-400 py-2 hover:text-white transition-colors"
+              >
+                <LogOut size={18} /> Sair da conta
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => handleNavClick(() => onNavigate('auth'))}
+              className="w-full py-3 rounded-lg bg-tiffany-green text-dark-900 font-bold uppercase text-center"
+            >
+              Acessar Plataforma
             </button>
           )}
         </div>

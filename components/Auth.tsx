@@ -133,7 +133,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
             ]);
 
             if (profileError) {
-                console.warn("Could not create users_profile record (likely missing table or RLS). Using Auth Metadata instead.", profileError);
+                // Ignore duplicate key error which might happen if a Trigger already created the user
+                if (profileError.code !== '23505') { 
+                   console.warn("Could not create users_profile record (likely missing table or RLS). Using Auth Metadata instead.", profileError);
+                }
             }
         } catch (dbError) {
             console.warn("Database error ignored to allow login:", dbError);
@@ -159,6 +162,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialMode = 'logi
       
       if (msg.includes('already registered')) {
           msg = 'Este e-mail já está cadastrado. Tente fazer login.';
+      } else if (msg.includes('Database error saving new user')) {
+          // This specific error comes from a failing trigger in the database
+          msg = 'Erro interno do servidor (Database Trigger). Por favor, execute o script db_setup.sql no painel do Supabase para corrigir a base de dados.';
       }
       
       setError(msg);

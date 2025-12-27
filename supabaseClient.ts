@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 // Safely access environment variables
 const env = (import.meta as any).env || {};
 
-// Use environment variables for security in production
-const supabaseUrl = env.VITE_SUPABASE_URL || 'https://bndpoenuyakgoqkwbgio.supabase.co';
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Rw_vA1RoSJEneMqaUNzSBA_J8J64SGj';
+// Credenciais atualizadas para integração com o banco de dados
+const supabaseUrl = env.VITE_SUPABASE_URL || 'https://ygzdmlrgtmkeqqbcpqjh.supabase.co';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_6SnD9gX5lbhFSdsEqXHZaw_b5RHYuuT';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
